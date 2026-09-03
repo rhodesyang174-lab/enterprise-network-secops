@@ -9,7 +9,8 @@ Connectivity and policy tests run against the deployed topology.
 
 | ID | Test | Expected | Result | Evidence |
 |---|---|---|---|---|
-| NET-01 | Workstation obtains a DHCP lease | Address in the correct subnet, gateway `.1`, DNS 192.168.40.10 | | |
+| NET-01 | Workstation obtains a DHCP lease | Address in the correct subnet, gateway `.1`, DNS 192.168.40.10 |<img width="863" height="699" alt="image" src="https://github.com/user-attachments/assets/ad44f4eb-52ed-4445-ba78-6954dab6caea" />
+ | |
 | NET-02 | Workstation reaches its own gateway | Ping succeeds | | |
 | NET-03 | Office workstation reaches a host in another office VLAN | Ping succeeds via core routing | | |
 | NET-04 | Office workstation reaches the server zone | Ping succeeds (no policy enforced yet — see note below) | | |

@@ -117,6 +117,6 @@ OPNsense · Zabbix · Wazuh · Ansible · Git
 
 ## Author
 
-**[Your Name]** — [LinkedIn](https://www.linkedin.com/in/your-profile)
+**Rhodes Yang** — [LinkedIn](https://www.linkedin.com/in/xiaohu-yang/)
 
 Feedback on the design is welcome; open an issue if you spot something.

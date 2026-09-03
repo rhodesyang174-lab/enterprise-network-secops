@@ -1,35 +1,40 @@
 # Access control matrix
 
-> **Implementation status: designed, not enforced.**
+> **Implementation status: mixed — some of this is now real.**
 >
-> Every SVI in this build lives on SW-CORE01, so inter-VLAN traffic is routed
-> locally and does not pass any inspection point. The table below is the intended
-> policy. It is documented here because the design work is real and the gap is
-> worth being explicit about — not because it is currently active.
+> Two separate enforcement points exist in this build, and they don't talk to
+> each other: **SW-CORE01** (Packet Tracer, all SVIs, no ACLs — office traffic
+> routes locally, bypassing inspection) and **OPNsense** (VirtualBox, a
+> genuine firewall with three interfaces matching the server/mgmt/dmz
+> subnets). Office VLANs (10/20/30) only exist in Packet Tracer and have no
+> path to OPNsense, so any policy involving them is still design-only. But
+> traffic **between the server, mgmt and DMZ zones inside VirtualBox does
+> cross OPNsense for real**, and P-005/P-006/P-007 below are now implemented
+> and verified there — see
+> [`../04-firewall/README.md`](../04-firewall/README.md) for the actual rules
+> (named FW-001 through FW-005) and live cross-zone routing tests.
 >
 > **Also note:** the policy below was written assuming a dedicated DMZ host
 > (`srv-web01` at 192.168.60.10). In the build, the portal (Nginx) ended up
 > co-located with internal DNS on `srv-dns01` in the server zone instead, and
-> **VLAN 60 has no host on it.** Rules P-007–P-009 describe intent that no
-> longer maps to the real topology — see the note below the table.
->
-> Enforcing the reachable parts of this matrix is the top item on the
-> remediation list (README, limitation 1).
+> **VLAN 60 has no host on it.** P-007–P-009 are implemented at the firewall
+> level (OPNsense has the OPT3/DMZ interface and rules ready) but have no real
+> DMZ host to originate or receive that traffic yet.
 
 ## Intended policy
 
-| ID | Source | Destination | Service | Action | Rationale |
+| ID | Source | Destination | Service | Action | Status |
 |---|---|---|---|---|---|
-| P-001 | Office (10/20/30) | srv-dns01 (192.168.40.10) | TCP/UDP 53 | Permit | Internal name resolution |
-| P-002 | Office (10/20/30) | Server zone (40) | Any other | Deny + log | Workstations have no business reaching servers directly |
-| P-003 | Office (10/20/30) | Ops zone (50) | Any | Deny + log | Keeps user devices out of the management zone |
-| P-004 | Office (10/20/30) | Device mgmt (99) | Any | Deny + log | Management plane is not reachable from user VLANs |
-| P-005 | Ops (50) | Server (40) | SSH, HTTPS, monitoring | Permit | Authorized administration |
-| P-006 | Ops (50) | Device mgmt (99) | SSH | Permit | Switch management from the admin workstation only |
-| P-007 | ~~DMZ (60)~~ | ~~srv-log01, srv-dns01~~ | ~~Approved log / DNS ports~~ | — | **Not applicable — no host in VLAN 60. See note.** |
-| P-008 | ~~DMZ (60)~~ | ~~Server zone (40)~~ | ~~Any other~~ | — | **Not applicable — see note.** |
-| P-009 | ~~DMZ (60)~~ | ~~Office (10/20/30)~~ | ~~Any~~ | — | **Not applicable — see note.** |
-| P-010 | Any | Device mgmt (99) | Any | Deny + log | Default-deny to the management VLAN |
+| P-001 | Office (10/20/30) | srv-dns01 (192.168.40.10) | TCP/UDP 53 | Permit | Design only — office traffic doesn't reach either enforcement point |
+| P-002 | Office (10/20/30) | Server zone (40) | Any other | Deny + log | Design only — same reason |
+| P-003 | Office (10/20/30) | Ops zone (50) | Any | Deny + log | Design only — same reason |
+| P-004 | Office (10/20/30) | Device mgmt (99) | Any | Deny + log | Design only — same reason |
+| P-005 | Ops (50) | Server (40) | SSH, HTTPS, monitoring | Permit | **Enforced — OPNsense FW-002, verified live** |
+| P-006 | Ops (50) | Device mgmt (99) | SSH | Permit | Design only — VLAN 99 (switch mgmt) is a different network than OPNsense's zones; not the same rule as FW-002 |
+| P-007 | DMZ (60) | srv-log01, srv-dns01 | Approved log / DNS ports | Permit | **Rule implemented — OPNsense FW-004** — but no DMZ host exists yet to generate this traffic |
+| P-008 | DMZ (60) | Server zone (40) | Any other | Deny + log | Same as P-007 — no DMZ host to test against yet |
+| P-009 | DMZ (60) | Office (10/20/30) | Any | Deny + log | **Rule implemented — OPNsense FW-005** — same caveat, plus office side is unreachable regardless |
+| P-010 | Any | Device mgmt (99) | Any | Deny + log | Design only — VLAN 99 is switch-side, not part of OPNsense's zones |
 
 ## Where the real risk sits now
 

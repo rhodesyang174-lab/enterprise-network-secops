@@ -29,8 +29,7 @@ stating rather than glossing over.`
 
 | Host | Method | Template | Key metrics |
 |---|---|---|---|
-| srv-web01 | Agent 2 | Linux by Zabbix agent | CPU, memory, disk, Nginx process/port |
-| srv-dns01 | Agent 2 | Linux by Zabbix agent | CPU, memory, disk, named process |
+| srv-dns01 | Agent 2 | Linux by Zabbix agent | CPU, memory, disk, Nginx **and** named process/port (co-located — see `../docs/ip-vlan-plan.md`) |
 | SW-CORE01 | SNMP | Generic SNMP | Reachability, interface status, throughput, errors |
 | `TODO` | | | |
 
@@ -55,8 +54,15 @@ A monitoring system that has never fired is untested.
 
 | Drill | Induced fault | Alert fired at | Detection delay | Ticket |
 |---|---|---|---|---|
-| Service down | Stopped Nginx on srv-web01 | | | |
+| Service down | Stopped Nginx on srv-dns01 | `TODO: exact Zabbix alert timestamp` | `TODO` | INC-03 — full troubleshooting log in `../10-operations/README.md` |
 | Disk pressure | Controlled fill on `TODO` | | | |
+
+> The OS-level side of the service-down drill (fault injection, layered
+> troubleshooting, recovery) is fully documented as INC-03 in section 10. What's
+> missing here specifically is the **Zabbix-side evidence** — the alert
+> triggering, its timestamp, and it clearing on recovery. If that was captured,
+> fill in the row above; if not, it's worth re-running the drill with the
+> Zabbix console open to close this out.
 
 Full cycle exercised: fault induced → alert raised → acknowledged with impact
 assessment → service restored → alert cleared → ticket closed with cause and

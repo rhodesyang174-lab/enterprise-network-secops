@@ -10,13 +10,22 @@ health check.
 
 | Host | Address | Zone | Role |
 |---|---|---|---|
-| srv-web01 | 192.168.60.10 | DMZ | Company portal |
-| srv-dns01 | 192.168.40.10 | Server | Internal DNS |
+| srv-dns01 | 192.168.40.10 | Server | Internal DNS **and** company portal (Nginx) — see note below |
 | srv-mon01 | 192.168.40.20 | Server | Monitoring |
 | srv-log01 | 192.168.40.30 | Server | Log collection |
 | srv-auto01 | 192.168.50.10 | Ops | Automation control node |
 
-OS: Rocky Linux `TODO: version`
+> The plan originally placed the portal on a dedicated `srv-web01` in the DMZ
+> (192.168.60.10). In the build it runs on `srv-dns01` instead — see
+> `../docs/access-control-matrix.md` for why that matters.
+
+OS: Rocky Linux 9.8 (Blue Onyx), installed via minimal ISO in VirtualBox.
+
+VMs use two interfaces where internet access is needed during setup: a NAT
+adapter (`10.0.2.0/24`, for `dnf update` and package installs) plus a static
+adapter on the zone's real subnet per the addressing plan — since Packet
+Tracer and VirtualBox are separate tools with no native bridge between them
+(see the top-level README's Known Limitations).
 
 ## What I configured
 
@@ -24,10 +33,10 @@ OS: Rocky Linux `TODO: version`
 the addressing plan, with the internal resolver as its DNS server.
 
 ```bash
-hostnamectl set-hostname srv-web01
+hostnamectl set-hostname srv-dns01
 nmcli con show
-nmcli con mod "<connection>" ipv4.addresses 192.168.60.10/24
-nmcli con mod "<connection>" ipv4.gateway 192.168.60.1
+nmcli con mod "<connection>" ipv4.addresses 192.168.40.10/24
+nmcli con mod "<connection>" ipv4.gateway 192.168.40.1
 nmcli con mod "<connection>" ipv4.dns 192.168.40.10
 nmcli con mod "<connection>" ipv4.method manual
 nmcli con up "<connection>"

@@ -21,8 +21,8 @@ forwarding — so device events are not in this platform yet.
 | System log | All Linux | `/var/log/messages` via agent | |
 | Authentication | All Linux | `/var/log/secure` via agent | |
 | Audit | All Linux | auditd via agent | |
-| Nginx access | srv-web01 | `/var/log/nginx/portal_access.log` | |
-| Nginx error | srv-web01 | `/var/log/nginx/portal_error.log` | |
+| Nginx access | srv-dns01 | `/var/log/nginx/portal_access.log` | |
+| Nginx error | srv-dns01 | `/var/log/nginx/portal_error.log` | |
 | Firewall | Edge | `TODO` | |
 | Network devices | Switches | Not yet forwarded — see section 01 | ❌ |
 

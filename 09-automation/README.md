@@ -11,11 +11,8 @@ Control node: srv-auto01 (192.168.50.10) · SSH key auth to managed hosts
 ## Inventory
 
 ```ini
-[web]
-srv-web01 ansible_host=192.168.60.10
-
-[infra]
-srv-dns01 ansible_host=192.168.40.10
+[web_dns]
+srv-dns01 ansible_host=192.168.40.10   ; runs both Nginx and named — see docs/ip-vlan-plan.md
 
 [all:vars]
 ansible_user=ops01

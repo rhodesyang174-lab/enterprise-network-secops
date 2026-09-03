@@ -27,21 +27,30 @@
 > redundant given the static-addressing rule above and are flagged for removal —
 > see limitation 10 in the top-level README.
 
-## Planned host addressing
+## Host addressing (as built)
 
 | Host | Address | Zone | Purpose |
 |---|---|---|---|
 | SW-CORE01 | 192.168.99.1 | VLAN 99 | L3 core |
 | SW-ACCESS01 | 192.168.99.11 | VLAN 99 | Access switch, office |
 | SW-ACCESS02 | 192.168.99.12 | VLAN 99 | Access switch, server/ops/DMZ |
-| srv-dns01 | 192.168.40.10 | Server | Internal DNS |
+| srv-dns01 | 192.168.40.10 | Server | Internal DNS **and** company portal (Nginx) — see note below |
 | srv-mon01 | 192.168.40.20 | Server | Monitoring |
 | srv-log01 | 192.168.40.30 | Server | Log collection |
 | srv-auto01 | 192.168.50.10 | Ops | Automation control node |
-| srv-web01 | 192.168.60.10 | DMZ | Company portal |
 | ops-client01 | 192.168.50.100 | Ops | Administrator workstation |
 
 All workstations receive `192.168.40.10` as their DNS server via DHCP.
+
+> **Deviation from the original plan.** The plan originally called for a
+> dedicated `srv-web01` at 192.168.60.10 in the DMZ zone, isolating the
+> internet-facing portal from internal services. In the build, Nginx was
+> deployed on `srv-dns01` instead, alongside internal DNS, in the server zone.
+> **VLAN 60 (DMZ) currently has no host on it.** This was a resource decision
+> in a lab environment, not an oversight, but it has a real consequence: the
+> portal and internal DNS now share a host and a security zone. See
+> `access-control-matrix.md` and the top-level README's Known Limitations for
+> what this means and what the intended fix looks like.
 
 ## Edge
 

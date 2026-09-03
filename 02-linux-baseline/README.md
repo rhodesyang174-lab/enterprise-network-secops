@@ -73,6 +73,27 @@ default via 10.0.2.2 dev enp0s3 proto dhcp src 10.0.2.15 metric 100
 10.0.2.0/24 dev enp0s3 proto kernel src 10.0.2.15 metric 100
 ```
 
+A second adapter, `enp0s8`, was then added and given the real static address
+from the addressing plan:
+
+![dual NIC — NAT plus static zone address](evidence/srv-dns01-10-dual-nic-static-ip.png)
+
+```
+[root@srv-dns01 ~]# nmcli device status
+DEVICE  TYPE      STATE      CONNECTION
+enp0s8  ethernet  connected  ethernet
+enp0s3  ethernet  connected  enp0s3
+
+[root@srv-dns01 ~]# ip addr show
+2: enp0s3: ... inet 10.0.2.15/24 ... enp0s3
+3: enp0s8: ... inet 192.168.40.10/24 brd 192.168.40.255 scope global noprefixroute enp0s8
+```
+
+Confirmed: `enp0s3` stays on NAT (10.0.2.15, for `dnf`/internet), `enp0s8`
+carries the real zone address (192.168.40.10/24) from the addressing plan.
+This closes out what was previously an open item — the static address is now
+directly evidenced, not just asserted.
+
 `proto dhcp` on that route confirms this interface is DHCP-assigned — correct
 for the NAT/internet-access adapter. The second, static interface at
 192.168.40.10 (the one that matters for the addressing plan) is a separate
@@ -149,12 +170,22 @@ uid=1000(yang01) gid=1000(yang01) groups=1000(yang01),10(wheel)
 ```
 
 Account is in the `wheel` group, which grants `sudo` on Rocky by default.
-**`TODO`: this hasn't been confirmed directly — run `sudo -l -U yang01` and
-capture the output.** Also worth reconciling: the section 10 incident drills
-reference an account called `ops01` for SSH access, but the account actually
-created here is `yang01`. `TODO: confirm which account name is the real one in
-use and make this consistent across sections 02 and 10 — either rename, or
-note that both exist and why.`
+Confirmed directly rather than just inferred from group membership:
+
+![sudo -l -U yang01](evidence/srv-dns01-13-sudo-verify.png)
+
+```
+[yang01@srv-dns01 ~]$ sudo -l -U yang01
+...
+User yang01 may run the following commands on srv-dns01:
+    (ALL) ALL
+```
+
+**`yang01` is the confirmed, real account name in use.** Section 10's
+incident-drill write-up currently uses `ops01` in its SSH commands — that's
+the inconsistency to fix, on that side: `TODO: update
+../10-operations/README.md` to use `yang01` throughout, or note explicitly if
+a separate `ops01` account was also created for that context.
 
 ### 7. Basic system inventory
 
@@ -197,22 +228,49 @@ the srv-dns01 process.
 
 ## SSH key authentication
 
-**Not yet evidenced.** Planned approach:
+Performed from a Kali Linux admin workstation on the same subnet as
+`srv-dns01`.
 
-```bash
-# from the admin workstation
-ssh-keygen -t ed25519 -C "yang01-lab"
-ssh-copy-id yang01@192.168.40.10
-ssh yang01@192.168.40.10
+**1. Generate a key pair on the admin workstation:**
+
+![ssh-keygen](evidence/srv-dns01-11-ssh-keygen.png)
+
+```
+┌──(kali㉿kali)-[~]
+└─$ ssh-keygen -t ed25519 -C "yang01-lab"
+...
+Your identification has been saved in /home/kali/.ssh/id_ed25519
+Your public key has been saved in /home/kali/.ssh/id_ed25519.pub
 ```
 
-```bash
-# on the server, after confirming key login works
-sudo sshd -t && sudo systemctl reload sshd
+**2. Copy the key to the server, then log in:**
+
+![ssh-copy-id and key-based login](evidence/srv-dns01-12-ssh-copy-id-login.png)
+
+```
+┌──(kali㉿kali)-[~]
+└─$ ssh-copy-id yang01@192.168.40.10
+...
+Number of key(s) added: 1
+
+┌──(kali㉿kali)-[~]
+└─$ ssh yang01@192.168.40.10
+[yang01@srv-dns01 ~]$ id
+uid=1000(yang01) gid=1000(yang01) groups=1000(yang01),10(wheel) context=unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023
 ```
 
-`TODO: capture the login succeeding (prompt changes to the server's), and
-sshd_config afterward if PasswordAuthentication was disabled.`
+The `ssh yang01@192.168.40.10` line goes straight to the shell prompt with no
+password re-entry — confirming the key, not a cached password, is what
+authenticated the session. `id` also shows an SELinux context
+(`unconfined_u:unconfined_r:...`), confirming SELinux is active on this host,
+which is worth a mention: `TODO — check `getenforce` and note whether it's
+Enforcing or Permissive; this affects how much the hardening in section 05
+actually buys you.`
+
+**Still open:** `TODO: was `PasswordAuthentication` actually disabled in
+`sshd_config` afterward? Key login working doesn't by itself prove password
+login was turned off — capture `grep PasswordAuthentication
+/etc/ssh/sshd_config` to confirm.`
 
 ## Health check
 
@@ -235,26 +293,28 @@ output rather than duplicating it here.
 |---|---|---|---|
 | Rocky Linux installs and boots | Reaches login prompt, hostname set | Pass | `srv-dns01-03-boot-hostname.png` |
 | NAT interface gets an address | `10.0.2.x` via DHCP | Pass | `srv-dns01-04-nmcli-ip-add.png` |
+| Static address on the zone subnet | 192.168.40.10 assigned | Pass | `srv-dns01-10-dual-nic-static-ip.png` |
 | Time sync | `timedatectl` reports synchronized | Pass | `srv-dns01-06-chrony-timedatectl.png` |
 | System update completes | No errors | Pass | `srv-dns01-08-dnf-update.png` |
 | Firewall active on boot | `firewalld` zone active | Pass | `srv-dns01-07-firewalld.png` |
 | Account created, in `wheel` | `id` shows correct groups | Pass | `srv-dns01-09-system-info-user.png` |
-| Static address on the zone subnet | 192.168.40.10 assigned | `TODO` | |
-| `sudo` actually works for the account | Authorized commands succeed | `TODO` | |
-| Key-based SSH | Login succeeds without password | `TODO` | |
+| `sudo` actually works for the account | Authorized commands succeed | Pass | `srv-dns01-13-sudo-verify.png` |
+| Key-based SSH | Login succeeds without password | Pass | `srv-dns01-12-ssh-copy-id-login.png` |
+| Password auth disabled in `sshd_config` | `PasswordAuthentication no` | `TODO` | |
 | Other three servers built | Hostname + address confirmed each | `TODO` | |
 
 ## Known limitations
 
-1. **Static addressing to 192.168.40.10 is not directly evidenced yet** —
-   only the NAT/DHCP interface (10.0.2.15) has been captured. The static
-   adapter needs its own `nmcli`/`ip addr` screenshot.
-2. **Account naming is inconsistent** — `yang01` was created here; `ops01` is
-   referenced in section 10's incident drills. Needs reconciling.
-3. **`sudo` privilege is inferred from group membership, not directly tested**
-   — `sudo -l` hasn't been run.
-4. **SSH key authentication is planned but not yet evidenced.**
-5. **srv-mon01, srv-log01, srv-auto01 are not yet built or documented here** —
-   only srv-dns01 has a build log.
-6. No centralized account management (that's a section 09 concern) and no
+1. **Password authentication may still be enabled alongside key auth** — key
+   login was confirmed working, but `sshd_config` wasn't checked afterward to
+   confirm `PasswordAuthentication no` was actually set.
+2. **SELinux mode not confirmed** — `id` shows an SELinux context is active,
+   but whether it's Enforcing or Permissive hasn't been checked
+   (`getenforce`). This affects how much section 05's hardening actually buys.
+3. **srv-mon01, srv-log01, srv-auto01 are not yet built or documented here** —
+   only srv-dns01 has a full build log. A `hostnamectl` + `ip addr show` per
+   host is enough when they're built.
+4. No centralized account management (that's a section 09 concern) and no
    configuration management applied to this baseline itself yet.
+5. **Section 10's incident drills reference `ops01`**, not `yang01` — the
+   account name should be made consistent there.

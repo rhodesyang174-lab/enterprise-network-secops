@@ -17,7 +17,7 @@ health check.
 > (192.168.60.10). In the build it runs on `srv-dns01` instead — see
 > `../docs/access-control-matrix.md` for why that matters.
 
-OS: **Rocky Linux 9.8 (Blue Onyx)**, kernel `5.14.0-687.10.1.el9_0.1.x86_64`,
+OS: **Rocky Linux 9.8 (Blue Onyx)**, kernel `5.14.0-687.10.1.el9_8.0.1.x86_64`,
 installed via minimal ISO in VirtualBox (2 vCPU, 2048 MB RAM, 20 GB disk).
 
 VMs use two interfaces: a NAT adapter (`10.0.2.0/24`) for internet access during
@@ -32,7 +32,13 @@ Known Limitations).
 
 ### 1. Install and set hostname
 
+![VM creation summary](evidence/srv-dns01-01-vm-summary.png)
+![Rocky Linux installation summary](evidence/srv-dns01-02-install-summary.png)
+
 ```
+Rocky Linux 9.8 (Blue Onyx)
+Kernel 5.14.0-687.10.1.el9_8.0.1.x86_64 on x86_64
+
 vbox login: root
 Password:
 [root@vbox ~]# hostnamectl set-hostname srv-dns01
@@ -40,10 +46,14 @@ Password:
 [root@srv-dns01 ~]#
 ```
 
+![Boot and hostname set](evidence/srv-dns01-03-boot-hostname.png)
+
 ### 2. Addressing
 
 `nmcli device status` at this point showed a single interface, `enp0s3`,
 picking up an address from VirtualBox's NAT DHCP:
+
+![nmcli device status and ip add](evidence/srv-dns01-04-nmcli-ip-add.png)
 
 ```
 DEVICE  TYPE      STATE      CONNECTION
@@ -54,6 +64,8 @@ enp0s3  ethernet  connected  enp0s3
 2: enp0s3: ... mtu 1500 ...
     inet 10.0.2.15/24 brd 10.0.2.255 scope global dynamic noprefixroute enp0s3
 ```
+
+![ip route and resolv.conf](evidence/srv-dns01-05-ip-route-resolv.png)
 
 ```
 [root@srv-dns01 ~]# ip route
@@ -77,6 +89,8 @@ chronyc sources
 timedatectl
 ```
 
+![chrony install and timedatectl](evidence/srv-dns01-06-chrony-timedatectl.png)
+
 ```
 System clock synchronized: yes
 NTP service: active
@@ -94,8 +108,10 @@ timestamps lining up across hosts.
 dnf update -y
 ```
 
+![dnf update output](evidence/srv-dns01-08-dnf-update.png)
+
 Completed cleanly — kernel, NetworkManager, chrony, and related packages
-upgraded, ending on `kernel-5.14.0-687.42.1.el9_0.1`. No errors.
+upgraded, ending on `kernel-5.14.0-687.42.1.el9_8.0.1`. No errors.
 
 ### 5. Firewall
 
@@ -103,6 +119,8 @@ upgraded, ending on `kernel-5.14.0-687.42.1.el9_0.1`. No errors.
 systemctl enable --now firewalld
 firewall-cmd --list-all
 ```
+
+![firewalld enabled and list-all](evidence/srv-dns01-07-firewalld.png)
 
 ```
 public (active)
@@ -124,6 +142,8 @@ http/dns services are running and confirm the zone reflects them).
 id yang01
 ```
 
+![system inventory and id yang01](evidence/srv-dns01-09-system-info-user.png)
+
 ```
 uid=1000(yang01) gid=1000(yang01) groups=1000(yang01),10(wheel)
 ```
@@ -138,9 +158,13 @@ note that both exist and why.`
 
 ### 7. Basic system inventory
 
+Same screenshot as section 6 above (`srv-dns01-09-system-info-user.png`) —
+`hostname`, `uname`, `free` and `df` were captured in the same session right
+before `id yang01`.
+
 ```bash
 hostname            # srv-dns01
-uname -r             # 5.14.0-687.10.1.el9_0.1.x86_64
+uname -r             # 5.14.0-687.10.1.el9_8.0.1.x86_64
 cat /etc/rocky-release   # Rocky Linux release 9.8 (Blue Onyx)
 free -h
 df -h
@@ -158,9 +182,6 @@ Filesystem              Size  Used Avail Use% Mounted on
 
 Nothing concerning — plenty of free memory and disk headroom at this point in
 the build.
-
-Evidence: `evidence/srv-dns01-install.jpg`, `evidence/srv-dns01-network.jpg`,
-`evidence/srv-dns01-update-firewall-users.jpg`
 
 ---
 
@@ -212,11 +233,12 @@ output rather than duplicating it here.
 
 | Test | Expected | Result | Evidence |
 |---|---|---|---|
-| Rocky Linux installs and boots | Reaches login prompt, hostname set | Pass | `evidence/srv-dns01-install.jpg` |
-| Time sync | `timedatectl` reports synchronized | Pass | `evidence/srv-dns01-network.jpg` |
-| System update completes | No errors | Pass | `evidence/srv-dns01-update-firewall-users.jpg` |
-| Firewall active on boot | `firewalld` zone active | Pass | `evidence/srv-dns01-update-firewall-users.jpg` |
-| Account created, in `wheel` | `id` shows correct groups | Pass | `evidence/srv-dns01-update-firewall-users.jpg` |
+| Rocky Linux installs and boots | Reaches login prompt, hostname set | Pass | `srv-dns01-03-boot-hostname.png` |
+| NAT interface gets an address | `10.0.2.x` via DHCP | Pass | `srv-dns01-04-nmcli-ip-add.png` |
+| Time sync | `timedatectl` reports synchronized | Pass | `srv-dns01-06-chrony-timedatectl.png` |
+| System update completes | No errors | Pass | `srv-dns01-08-dnf-update.png` |
+| Firewall active on boot | `firewalld` zone active | Pass | `srv-dns01-07-firewalld.png` |
+| Account created, in `wheel` | `id` shows correct groups | Pass | `srv-dns01-09-system-info-user.png` |
 | Static address on the zone subnet | 192.168.40.10 assigned | `TODO` | |
 | `sudo` actually works for the account | Authorized commands succeed | `TODO` | |
 | Key-based SSH | Login succeeds without password | `TODO` | |

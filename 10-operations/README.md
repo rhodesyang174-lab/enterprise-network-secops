@@ -78,7 +78,8 @@ tcp   LISTEN  128  0.0.0.0:80         0.0.0.0:*
 `0 loaded units listed` under Services means `systemctl --failed` came back
 clean — no failed units at the time of the run.
 
-Evidence: `evidence/task11-01-daily-check.png`
+<img src="evidence/task11-01-daily-check.png" width="760" alt="daily_check.sh full output on srv-dns01">
+
 
 ---
 
@@ -109,7 +110,8 @@ what turns "the website is down" into a specific, evidenced root cause instead
 of a guess. Ping succeeding first is what rules out the network and focuses
 the rest of the investigation on the host itself.
 
-Evidence: `evidence/task11-02-inc03-troubleshoot.png`
+<img src="evidence/task11-02-inc03-troubleshoot.png" width="760" alt="INC-03 layered troubleshooting: curl, ping, nc, ssh, systemctl status">
+
 
 **3. Recovery and verification:**
 
@@ -131,7 +133,8 @@ symptom, but without `enable` the same failure mode reappears after the next
 reboot. The incident isn't closed until both the immediate service and its
 persistence are confirmed.
 
-Evidence: `evidence/task11-03-inc03-recovered.png`
+<img src="evidence/task11-03-inc03-recovered.png" width="760" alt="INC-03 recovery: nginx started and enabled, curl returns 200 OK">
+
 
 **4. Incident ticket:**
 
@@ -174,7 +177,8 @@ sudo systemctl stop named
 | Service | `ssh` in, `systemctl status named` | `Active: inactive (dead)` | Confirmed: `named` is not running |
 | Logs | `sudo journalctl -u named -n 20` | Shows the managed-keys and resolver shutting down at the expected time | Confirms clean stop, matches the induced fault |
 
-Evidence: `evidence/task11-04-inc02-troubleshoot.png`
+<img src="evidence/task11-04-inc02-troubleshoot.png" width="760" alt="INC-02 layered troubleshooting: dig, ping, nc, ssh, systemctl status named">
+
 
 **3. Recovery and verification:**
 
@@ -201,11 +205,12 @@ This INC-02 write-up is kept as originally recorded (including the old
 `example.lab` domain in the commands below) because it's an accurate account
 of what was found and when — not backfilled to look correct in hindsight.
 
-Evidence: `evidence/task11-05-inc02-recovered.png`
+<img src="evidence/task11-05-inc02-recovered.png" width="760" alt="INC-02 recovery dig: NOERROR but empty answer, root SOA in authority section">
+
 
 ---
 
-## Incident drill C — INC-05: disk space alert (partial)
+## Incident drill C — INC-05: disk space alert
 
 **1. Fault injection**, on `srv-dns01` — simulate a runaway log file:
 
@@ -213,6 +218,10 @@ Evidence: `evidence/task11-05-inc02-recovered.png`
 sudo dd if=/dev/zero of=/var/log/large_test.log bs=1M count=100
 df -h /
 ```
+
+<img src="evidence/task11-06-inc05-fault-injection.png" width="760" alt="100MB test file created, disk usage at 14%">
+
+100 MB file created; `/` usage moved to 14%.
 
 **2. Investigation:**
 
@@ -223,12 +232,34 @@ cat /etc/logrotate.conf | head -20
 ls /etc/logrotate.d/
 ```
 
-The point of checking `logrotate.conf` and `/etc/logrotate.d/` here, not just
-deleting the file: a single large file is a symptom, but if rotation isn't
-configured for the log directory that filled up, the same alert fires again
-on its own with no drill required.
+<img src="evidence/task11-06b-inc05-troubleshoot-logrotate.png" width="760" alt="du confirms the test file is the largest item; logrotate.conf and logrotate.d checked">
 
-Evidence: `evidence/task11-06-inc05-troubleshoot.png`
+```
+100M    /var/log/large_test.log
+9.2M    /var/log/nginx
+3.9M    /var/log/anaconda
+2.0M    /var/log/messages-20260904
+1.9M    /var/log/audit
+```
+
+`du` confirms the test file is, by a wide margin, the largest thing in
+`/var/log` — real logs (`nginx`, `anaconda`, `messages`, `audit`) are all a
+reasonable size, not the cause.
+
+**The point of checking `logrotate.conf` and `/etc/logrotate.d/` here, not
+just deleting the file:** a single large file is a symptom; whether it can
+recur on its own is a separate question that only rotation config answers.
+
+**Finding: rotation is correctly configured, not the root cause.**
+`logrotate.conf` shows `weekly` / `rotate 4` / `dateext` (which is exactly
+why `messages-20260904` and `secure-20260904` already exist as dated,
+rotated files — rotation is visibly working, not just configured on paper).
+`/etc/logrotate.d/` includes a dedicated `nginx` entry, confirming the
+service most likely to generate this alert in a real scenario already has
+its own rotation policy. **The honest conclusion is the less dramatic one:**
+this alert's cause was the deliberately-injected test file, not a gap in log
+management. Recording that plainly is more useful than manufacturing a
+rotation fix for a problem that wasn't actually there.
 
 **3. Recovery:**
 
@@ -237,12 +268,29 @@ sudo rm -f /var/log/large_test.log
 df -h /
 ```
 
-Evidence: `evidence/task11-07-inc05-recovered.png`
+<img src="evidence/task11-07-inc05-recovered.png" width="760" alt="test file removed, disk usage back to 13%">
 
-`TODO: this one is marked partial — was a logrotate gap actually found, or did
-rotation turn out to be configured correctly? Either answer is a real finding;
-write down which it was.` `TODO: was an incident ticket filled for this one, or
-was it left as optional per the acceptance criteria below?`
+Usage back to 13% — space reclaimed, confirmed by `df`, not assumed from the
+`rm` command succeeding.
+
+**4. Incident ticket:**
+
+| Field | Content |
+|---|---|
+| Ticket ID | INC-05 |
+| Reported at / by | Simulated monitoring alert |
+| Symptom | Disk usage on `/` approaching threshold |
+| Affected service and scope | No service impact — usage rose from 13% to 14%, well under any alerting threshold in this drill |
+| Recent changes | None (test file injected for this drill) |
+| Monitoring and log evidence | `df -h` before/after; `du -sh /var/log/*` ranked by size |
+| Investigation steps | `df -hT` → `du -sh` ranked → `logrotate.conf` → `/etc/logrotate.d/` |
+| Root cause | Deliberately injected 100 MB test file; **not** a logrotate gap — rotation confirmed correctly configured (weekly, 4 backlogs, dateext, per-service entries including `nginx`) |
+| Temporary fix | `rm -f /var/log/large_test.log` |
+| Permanent fix | None needed — no underlying misconfiguration found |
+| Recovery verification | `df -h /` confirms usage back to baseline (13%) |
+| Preventive action | None required for rotation (already correct); general recommendation to keep Zabbix disk-usage alerting in place as the early-warning layer |
+| Handled by / reviewed by | `[Your name]` / `[Instructor / self-reviewed]` |
+| Closed at | `[recovery time]` |
 
 ---
 
@@ -263,14 +311,13 @@ Blank forms used during the build: [`templates/`](templates/)
       (user → network → port → service → logs) → recovery → verification
 - [x] Each completed drill has a filled incident ticket
 - [x] Troubleshooting shows layered reasoning, not "just restart it and see"
-- [ ] INC-05 (disk alert) — troubleshooting done, write-up and ticket pending
+- [x] INC-05 (disk alert) — full cycle complete: injection, investigation
+      (including a real rotation-config check), recovery, and ticket
 
 ## Known limitations
 
-1. **INC-05 is incomplete** — fault was induced and investigated, but the
-   finding (was logrotate actually misconfigured?) and the incident ticket
-   are not yet written up.
-2. **Tickets are tracked as markdown files in this repo, not in a ticketing
+1. **Tickets are tracked as markdown files in this repo, not in a ticketing
    system.** Fine for a lab of this size; would not scale to a real team.
-3. **Drills were run manually, on demand** — no scheduled chaos testing, no
+2. **Drills were run manually, on demand** — no scheduled chaos testing, no
    alerting-to-ticket automation.
+

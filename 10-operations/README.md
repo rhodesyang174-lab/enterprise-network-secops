@@ -20,28 +20,28 @@ watches, so a human running this by hand sees the same picture Zabbix does.
 ```bash
 cat > daily_check.sh << 'SCRIPT'
 #!/bin/bash
-echo "===== 日常巡检报告 ====="
-echo "巡检时间: $(date)"
+echo "===== Daily Check Report ====="
+echo "Time: $(date)"
 echo ""
-echo "--- 系统信息 ---"
+echo "--- System ---"
 hostnamectl | grep -E 'hostname|Operating|Kernel'
-echo "运行时间: $(uptime -p)"
+echo "Uptime: $(uptime -p)"
 echo ""
-echo "--- 资源使用 ---"
-echo "CPU 负载: $(uptime | awk -F'load average:' '{print $2}')"
+echo "--- Resources ---"
+echo "Load average: $(uptime | awk -F'load average:' '{print $2}')"
 free -h | grep -E 'Mem|Swap'
 df -hT | grep -vE 'tmpfs|devtmpfs'
 echo ""
-echo "--- 服务状态 ---"
-systemctl --failed --no-legend || echo "无失败服务"
+echo "--- Services ---"
+systemctl --failed --no-legend || echo "No failed services"
 echo "Nginx: $(systemctl is-active nginx)"
-echo "Named(DNS): $(systemctl is-active named 2>/dev/null || echo '未安装')"
-echo "Zabbix Agent: $(systemctl is-active zabbix-agent2 2>/dev/null || echo '未安装')"
+echo "Named (DNS): $(systemctl is-active named 2>/dev/null || echo 'not installed')"
+echo "Zabbix Agent: $(systemctl is-active zabbix-agent2 2>/dev/null || echo 'not installed')"
 echo ""
-echo "--- 关键端口监听 ---"
+echo "--- Listening ports ---"
 ss -lntup | grep -E ':(22|53|80|10050)'
 echo ""
-echo "--- 最近 1 小时告警日志 ---"
+echo "--- Warning-level log entries, last 1 hour ---"
 journalctl -p warning --since "1 hour ago" --no-pager | tail -10
 SCRIPT
 chmod +x daily_check.sh
@@ -184,15 +184,22 @@ sudo systemctl enable named
 dig @127.0.0.1 portal.example.lab
 ```
 
-**Result as recorded:** `status: NOERROR` but the ANSWER section came back
-empty, with a root-server SOA in the authority section. That is the signature
-of a recursive lookup that found nothing, not a locally authoritative answer —
-so `named` being back to `active` restored the *service*, but this run does
-not actually confirm the zone itself is resolving correctly. This is logged
-here as an open item rather than reported as a clean pass, and is the same
-finding carried into [`../03-web-dns/README.md`](../03-web-dns/README.md).
-**Next step: check the zone stanza in `named.conf` and confirm
-`example.lab` loads as an authoritative zone, then re-run this test.**
+**Result as recorded at the time:** `status: NOERROR` but the ANSWER section
+came back empty, with a root-server SOA in the authority section — the
+signature of a recursive lookup that found nothing, not a locally
+authoritative answer. So `named` being back to `active` restored the
+*service*, but this specific run didn't confirm the zone itself was
+resolving correctly. It's logged here as it was found, an open item at the
+time rather than a clean pass reported dishonestly.
+
+**Update: this was resolved.** The underlying cause — the zone wasn't
+correctly serving as authoritative, compounded by a later domain migration
+from `example.lab` to `lab-test.local` — was fully diagnosed and fixed in
+[`../03-web-dns/README.md`](../03-web-dns/README.md), including a
+cross-host `dig` from `srv-mon01` confirming a real, authoritative answer.
+This INC-02 write-up is kept as originally recorded (including the old
+`example.lab` domain in the commands below) because it's an accurate account
+of what was found and when — not backfilled to look correct in hindsight.
 
 Evidence: `evidence/task11-05-inc02-recovered.png`
 
@@ -260,13 +267,10 @@ Blank forms used during the build: [`templates/`](templates/)
 
 ## Known limitations
 
-1. **DNS zone resolution is an open item**, not confirmed working — see
-   INC-02 recovery above. This should be resolved and re-tested before calling
-   section 03 complete.
-2. **INC-05 is incomplete** — fault was induced and investigated, but the
+1. **INC-05 is incomplete** — fault was induced and investigated, but the
    finding (was logrotate actually misconfigured?) and the incident ticket
    are not yet written up.
-3. **Tickets are tracked as markdown files in this repo, not in a ticketing
+2. **Tickets are tracked as markdown files in this repo, not in a ticketing
    system.** Fine for a lab of this size; would not scale to a real team.
-4. **Drills were run manually, on demand** — no scheduled chaos testing, no
+3. **Drills were run manually, on demand** — no scheduled chaos testing, no
    alerting-to-ticket automation.

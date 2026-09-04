@@ -134,6 +134,6 @@ real incident from this build rather than a textbook definition.
 
 ## Author
 
-**[Your Name]** — [LinkedIn](https://www.linkedin.com/in/your-profile)
+**Rhodes Yang** — [LinkedIn](https://www.linkedin.com/in/your-profile)
 
 Feedback on the design is welcome; open an issue if you spot something.

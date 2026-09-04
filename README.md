@@ -30,14 +30,14 @@ them, automate the repetitive parts, and put a process around running them.
 |---|---|---|---|
 | — | [Design](docs/) | Zone model, addressing plan, access-control matrix | ✅ |
 | 01 | [Network](01-network/) | VLANs, inter-VLAN routing, DHCP, trunking, switch management hardening | ✅ |
-| 02 | [Linux baseline](02-linux-baseline/) | Server deployment, accounts, SSH key auth, time sync, health checks | 🚧 |
-| 03 | [Web & DNS](03-web-dns/) | Nginx portal, BIND internal resolver, config backup and restore drill | 🚧 |
-| 04 | [Edge firewall](04-firewall/) | Zones, NAT, port forwarding, policy enforcement and rollback | 🚧 |
-| 05 | [Host hardening](05-hardening/) | Account and SSH hardening, service/port reduction, file permissions, auditd | 🚧 |
-| 06 | [Monitoring](06-monitoring/) | Zabbix agent and SNMP onboarding, thresholds, alert drills | 🚧 |
-| 07 | [Logging & IR](07-logging/) | Wazuh log collection, alert triage, incident tickets | 🚧 |
-| 08 | [Vulnerability mgmt](08-vulnerability/) | Authorized scanning, manual validation, remediation and retest | 🚧 |
-| 09 | [Automation](09-automation/) | Ansible inventory and playbooks, idempotency checks | 🚧 |
+| 02 | [Linux baseline](02-linux-baseline/) | Server deployment, accounts, SSH key auth, time sync, health checks | ✅ |
+| 03 | [Web & DNS](03-web-dns/) | Nginx portal, BIND internal resolver, config backup and restore drill | ✅ |
+| 04 | [Edge firewall](04-firewall/) | Zones, NAT, port forwarding, policy enforcement and rollback | ✅ |
+| 05 | [Host hardening](05-hardening/) | Account and SSH hardening, service/port reduction, file permissions, auditd | ✅ |
+| 06 | [Monitoring](06-monitoring/) | Zabbix agent and SNMP onboarding, thresholds, alert drills | ✅ |
+| 07 | [Logging & IR](07-logging/) | Wazuh log collection, alert triage, incident tickets | ✅ |
+| 08 | [Vulnerability mgmt](08-vulnerability/) | Authorized scanning, manual validation, remediation and retest | ✅ |
+| 09 | [Automation](09-automation/) | Ansible inventory and playbooks, idempotency checks | ✅ |
 | 10 | [Operations](10-operations/) | Health-check routine, change records, incident handling, postmortems | 🚧 |
 
 ✅ documented · 🚧 built, write-up in progress
@@ -106,6 +106,15 @@ cross-cutting and worth stating once here rather than repeating everywhere.
    verified independently (network reachability within Packet Tracer; service
    behaviour on the VM itself).
 
+3. **Domain naming has been inconsistent across the build** —
+   `lab-test.local` (DNS/portal, section 03), `xyang.lab` (switches, section
+   01), `srv-log01.lab.local` (section 02). This wasn't just cosmetic: a
+   stale `example.lab` reference in an old Nginx config caused a real outage
+   (Real Incident #2 in [`03-web-dns/README.md`](03-web-dns/README.md)) once
+   the domain moved on and that one file didn't. That specific case is fixed;
+   the underlying inconsistency across the rest of the build is not — tracked
+   as an open item rather than swept under a rug.
+
 ---
 
 ## Tools
@@ -117,6 +126,6 @@ OPNsense · Zabbix · Wazuh · Ansible · Git
 
 ## Author
 
-**Rhodes Yang** — [LinkedIn](https://www.linkedin.com/in/xiaohu-yang/)
+**[Your Name]** — [LinkedIn](https://www.linkedin.com/in/your-profile)
 
 Feedback on the design is welcome; open an issue if you spot something.

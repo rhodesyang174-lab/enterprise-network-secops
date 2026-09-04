@@ -38,7 +38,7 @@ them, automate the repetitive parts, and put a process around running them.
 | 07 | [Logging & IR](07-logging/) | Wazuh log collection, alert triage, incident tickets | ✅ |
 | 08 | [Vulnerability mgmt](08-vulnerability/) | Authorized scanning, manual validation, remediation and retest | ✅ |
 | 09 | [Automation](09-automation/) | Ansible inventory and playbooks, idempotency checks | ✅ |
-| 10 | [Operations](10-operations/) | Health-check routine, change records, incident handling, postmortems | 🚧 |
+| 10 | [Operations](10-operations/) | Health-check routine, change records, incident handling, postmortems | ✅ |
 
 ✅ documented · 🚧 built, write-up in progress
 

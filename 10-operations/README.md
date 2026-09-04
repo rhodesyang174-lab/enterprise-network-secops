@@ -188,24 +188,26 @@ sudo systemctl enable named
 dig @127.0.0.1 portal.example.lab
 ```
 
-**Result as recorded at the time:** `status: NOERROR` but the ANSWER section
-came back empty, with a root-server SOA in the authority section — the
-signature of a recursive lookup that found nothing, not a locally
-authoritative answer. So `named` being back to `active` restored the
-*service*, but this specific run didn't confirm the zone itself was
-resolving correctly. It's logged here as it was found, an open item at the
+**Result as recorded at the time:** `status: NXDOMAIN`, with a root-server
+SOA in the authority section — the resolver reached out recursively and got
+a definitive "this name doesn't exist" from the root, rather than answering
+from a locally authoritative zone. So `named` being back to `active`
+restored the *service*, but this specific run confirmed the zone itself was
+**not** resolving correctly — a clean service status was not the same thing
+as a working zone. It's logged here as it was found, an open item at the
 time rather than a clean pass reported dishonestly.
 
 **Update: this was resolved.** The underlying cause — the zone wasn't
 correctly serving as authoritative, compounded by a later domain migration
 from `example.lab` to `lab-test.local` — was fully diagnosed and fixed in
 [`../03-web-dns/README.md`](../03-web-dns/README.md), including a
-cross-host `dig` from `srv-mon01` confirming a real, authoritative answer.
-This INC-02 write-up is kept as originally recorded (including the old
-`example.lab` domain in the commands below) because it's an accurate account
-of what was found and when — not backfilled to look correct in hindsight.
+cross-host `dig` from `srv-mon01` confirming a real, authoritative
+`NOERROR` answer this time. This INC-02 write-up is kept as originally
+recorded (including the old `example.lab` domain and the `NXDOMAIN` result
+in the commands below) because it's an accurate account of what was found
+and when — not backfilled to look correct in hindsight.
 
-<img src="evidence/task11-05-inc02-recovered.png" width="760" alt="INC-02 recovery dig: NOERROR but empty answer, root SOA in authority section">
+<img src="evidence/task11-05-inc02-recovered.png" width="760" alt="INC-02 recovery dig: NXDOMAIN, root SOA in authority section — zone not yet resolving">
 
 
 ---

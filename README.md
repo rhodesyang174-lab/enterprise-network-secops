@@ -124,13 +124,6 @@ OPNsense · Zabbix · Wazuh · Ansible · Git
 
 ---
 
-## Interview prep & resume framing
-
-[`docs/interview-prep.md`](docs/interview-prep.md) — a resume description and
-answers to common interview questions, each grounded in a specific,
-real incident from this build rather than a textbook definition.
-
----
 
 ## Author
 
